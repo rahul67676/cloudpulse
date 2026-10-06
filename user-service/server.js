@@ -1,4 +1,5 @@
 const express = require("express");
+const mysql = require("mysql2/promise");
 
 const app = express();
 
@@ -6,52 +7,75 @@ app.use(express.json());
 
 const PORT = process.env.PORT || 3002;
 
-const users = [
-  {
-    id: 1,
-    name: "Rahul Reddy",
-    email: "rahul@example.com"
-  },
-  {
-    id: 2,
-    name: "CloudPulse User",
-    email: "user@example.com"
-  }
-];
+const db = mysql.createPool({
+  host: process.env.DB_HOST || "localhost",
+  user: process.env.DB_USER || "cloudpulse",
+  password: process.env.DB_PASSWORD || "cloudpulse_password",
+  database: process.env.DB_NAME || "cloudpulse",
+  port: process.env.DB_PORT || 3306
+});
 
 // Health check
-app.get("/health", (req, res) => {
-  res.json({
-    status: "UP",
-    service: "user-service"
-  });
+app.get("/health", async (req, res) => {
+  try {
+    await db.query("SELECT 1");
+
+    res.json({
+      status: "UP",
+      service: "user-service",
+      database: "CONNECTED"
+    });
+  } catch (error) {
+    res.status(500).json({
+      status: "DOWN",
+      service: "user-service",
+      database: "DISCONNECTED"
+    });
+  }
 });
 
 // Get all users
-app.get("/users", (req, res) => {
-  res.json({
-    count: users.length,
-    users: users
-  });
+app.get("/users", async (req, res) => {
+  try {
+    const [users] = await db.query(
+      "SELECT id, name, email FROM users"
+    );
+
+    res.json({
+      count: users.length,
+      users: users
+    });
+  } catch (error) {
+    res.status(500).json({
+      error: "Failed to fetch users"
+    });
+  }
 });
 
 // Get user by ID
-app.get("/users/:id", (req, res) => {
-  const user = users.find(
-    item => item.id === Number(req.params.id)
-  );
+app.get("/users/:id", async (req, res) => {
+  try {
+    const [users] = await db.query(
+      "SELECT id, name, email FROM users WHERE id = ?",
+      [req.params.id]
+    );
 
-  if (!user) {
-    return res.status(404).json({
-      error: "User not found"
+    if (users.length === 0) {
+      return res.status(404).json({
+        error: "User not found"
+      });
+    }
+
+    res.json(users[0]);
+  } catch (error) {
+    res.status(500).json({
+      error: "Failed to fetch user"
     });
   }
-
-  res.json(user);
 });
 
 // Create user
-app.post("/users", (req, res) => {
+app.post("/users", async (req, res) => {
   const { name, email } = req.body;
 
   if (!name || !email) {
@@ -60,18 +84,32 @@ app.post("/users", (req, res) => {
     });
   }
 
-  const user = {
-    id: users.length + 1,
-    name,
-    email
-  };
+  try {
+    const [result] = await db.query(
+      "INSERT INTO users (name, email) VALUES (?, ?)",
+      [name, email]
+    );
 
-  users.push(user);
+    const [users] = await db.query(
+      "SELECT id, name, email FROM users WHERE id = ?",
+      [result.insertId]
+    );
 
-  res.status(201).json({
-    message: "User created successfully",
-    user
-  });
+    res.status(201).json({
+      message: "User created successfully",
+      user: users[0]
+    });
+  } catch (error) {
+    if (error.code === "ER_DUP_ENTRY") {
+      return res.status(409).json({
+        error: "Email already exists"
+      });
+    }
+
+    res.status(500).json({
+      error: "Failed to create user"
+    });
+  }
 });
 
 app.listen(PORT, "0.0.0.0", () => {
