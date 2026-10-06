@@ -4,6 +4,12 @@ services:
     container_name: cloudpulse-product-service
     ports:
       - "3001:3001"
+    environment:
+      DB_HOST: mysql
+      DB_USER: cloudpulse
+      DB_PASSWORD: cloudpulse_password
+      DB_NAME: cloudpulse
+      DB_PORT: 3306 
 
   user-service:
     build: ./user-service
