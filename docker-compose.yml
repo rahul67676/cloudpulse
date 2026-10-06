@@ -4,3 +4,9 @@ services:
     container_name: cloudpulse-product-service
     ports:
       - "3001:3001"
+
+  user-service:
+    build: ./user-service
+    container_name: cloudpulse-user-service
+    ports:
+      - "3002:3002"
