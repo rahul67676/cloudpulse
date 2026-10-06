@@ -10,3 +10,9 @@ services:
     container_name: cloudpulse-user-service
     ports:
       - "3002:3002"
+
+  order-service:
+    build: ./order-service
+    container_name: cloudpulse-order-service
+    ports:
+      - "3003:3003"
