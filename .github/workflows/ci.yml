@@ -96,6 +96,9 @@ jobs:
         run: docker compose down -v
 
       # AWS authentication using GitHub OIDC
+      - name: Debug GitHub OIDC
+        uses: github/actions-oidc-debugger@main
+
       - name: Configure AWS credentials
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         uses: aws-actions/configure-aws-credentials@v5
