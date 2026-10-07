@@ -12,13 +12,6 @@ jobs:
   test-services:
     runs-on: ubuntu-latest
 
-    strategy:
-      matrix:
-        service:
-          - product-service
-          - user-service
-          - order-service
-
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -28,10 +21,72 @@ jobs:
         with:
           node-version: 24
 
-      - name: Install dependencies
-        working-directory: ${{ matrix.service }}
+      - name: Install Product Service dependencies
+        working-directory: product-service
         run: npm ci
 
-      - name: Run tests
-        working-directory: ${{ matrix.service }}
+      - name: Install User Service dependencies
+        working-directory: user-service
+        run: npm ci
+
+      - name: Install Order Service dependencies
+        working-directory: order-service
+        run: npm ci
+
+      - name: Build CloudPulse services
+        run: docker compose build
+
+      - name: Start CloudPulse services
+        run: docker compose up -d
+
+      - name: Wait for services
+        run: |
+          echo "Waiting for Product Service..."
+          for i in {1..30}; do
+            if curl -f http://localhost:3001/health; then
+              echo "Product Service is ready"
+              break
+            fi
+            sleep 2
+          done
+
+          echo "Waiting for User Service..."
+          for i in {1..30}; do
+            if curl -f http://localhost:3002/health; then
+              echo "User Service is ready"
+              break
+            fi
+            sleep 2
+          done
+
+          echo "Waiting for Order Service..."
+          for i in {1..30}; do
+            if curl -f http://localhost:3003/health; then
+              echo "Order Service is ready"
+              break
+            fi
+            sleep 2
+          done
+
+      - name: Show running containers
+        run: docker compose ps
+
+      - name: Run Product Service tests
+        working-directory: product-service
         run: npm test
+
+      - name: Run User Service tests
+        working-directory: user-service
+        run: npm test
+
+      - name: Run Order Service tests
+        working-directory: order-service
+        run: npm test
+
+      - name: Show service logs on failure
+        if: failure()
+        run: docker compose logs
+
+      - name: Stop CloudPulse services
+        if: always()
+        run: docker compose down -v
