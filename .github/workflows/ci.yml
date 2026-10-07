@@ -1,0 +1,37 @@
+name: CloudPulse CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  test-services:
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        service:
+          - product-service
+          - user-service
+          - order-service
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Install dependencies
+        working-directory: ${{ matrix.service }}
+        run: npm ci
+
+      - name: Run tests
+        working-directory: ${{ matrix.service }}
+        run: npm test
