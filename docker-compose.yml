@@ -28,6 +28,12 @@ services:
     container_name: cloudpulse-order-service
     ports:
       - "3003:3003"
+    environment:
+      DB_HOST: mysql
+      DB_USER: cloudpulse
+      DB_PASSWORD: cloudpulse_password
+      DB_NAME: cloudpulse
+      DB_PORT: 3306
   mysql:
     image: mysql:8.4
     container_name: cloudpulse-mysql
