@@ -1,4 +1,4 @@
-name: CloudPulse CI
+name: CloudPulse CI/CD
 
 on:
   push:
@@ -8,8 +8,12 @@ on:
     branches:
       - main
 
+permissions:
+  contents: read
+  id-token: write
+
 jobs:
-  test-services:
+  test-and-build:
     runs-on: ubuntu-latest
 
     steps:
@@ -90,3 +94,59 @@ jobs:
       - name: Stop CloudPulse services
         if: always()
         run: docker compose down -v
+
+      # AWS authentication using GitHub OIDC
+      - name: Configure AWS credentials
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: aws-actions/configure-aws-credentials@v5
+        with:
+          role-to-assume: arn:aws:iam::921040036993:role/CloudPulseGitHubActionsRole
+          aws-region: us-west-1
+
+      # Login to Amazon ECR
+      - name: Login to Amazon ECR
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      # Build Product Service image
+      - name: Build Product Service Docker image
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: |
+          docker build -t ${{ steps.login-ecr.outputs.registry }}/cloudpulse:product-${{ github.sha }} ./product-service
+          docker tag ${{ steps.login-ecr.outputs.registry }}/cloudpulse:product-${{ github.sha }} ${{ steps.login-ecr.outputs.registry }}/cloudpulse:product-latest
+
+      # Push Product Service image
+      - name: Push Product Service Docker image
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: |
+          docker push ${{ steps.login-ecr.outputs.registry }}/cloudpulse:product-${{ github.sha }}
+          docker push ${{ steps.login-ecr.outputs.registry }}/cloudpulse:product-latest
+
+      # Build User Service image
+      - name: Build User Service Docker image
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: |
+          docker build -t ${{ steps.login-ecr.outputs.registry }}/cloudpulse:user-${{ github.sha }} ./user-service
+          docker tag ${{ steps.login-ecr.outputs.registry }}/cloudpulse:user-${{ github.sha }} ${{ steps.login-ecr.outputs.registry }}/cloudpulse:user-latest
+
+      # Push User Service image
+      - name: Push User Service Docker image
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: |
+          docker push ${{ steps.login-ecr.outputs.registry }}/cloudpulse:user-${{ github.sha }}
+          docker push ${{ steps.login-ecr.outputs.registry }}/cloudpulse:user-latest
+
+      # Build Order Service image
+      - name: Build Order Service Docker image
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: |
+          docker build -t ${{ steps.login-ecr.outputs.registry }}/cloudpulse:order-${{ github.sha }} ./order-service
+          docker tag ${{ steps.login-ecr.outputs.registry }}/cloudpulse:order-${{ github.sha }} ${{ steps.login-ecr.outputs.registry }}/cloudpulse:order-latest
+
+      # Push Order Service image
+      - name: Push Order Service Docker image
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: |
+          docker push ${{ steps.login-ecr.outputs.registry }}/cloudpulse:order-${{ github.sha }}
+          docker push ${{ steps.login-ecr.outputs.registry }}/cloudpulse:order-latest
