@@ -6,10 +6,10 @@ function App() {
 
   const loadData = async () => {
     try {
-      const productsResponse = await fetch("http://localhost:3001/products");
+      const productsResponse = await fetch("/api/products");
       const productsData = await productsResponse.json();
 
-      const ordersResponse = await fetch("http://localhost:3003/orders");
+      const ordersResponse = await fetch("/api/orders");
       const ordersData = await ordersResponse.json();
 
       setProducts(productsData.products || []);

@@ -4,3 +4,4 @@ node_modules/
 *.log
 .DS_Store
 .vscode/
+k8s/mysql-secret.yaml

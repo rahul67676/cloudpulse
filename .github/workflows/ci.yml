@@ -151,3 +151,16 @@ jobs:
         run: |
           docker push ${{ steps.login-ecr.outputs.registry }}/cloudpulse:order-${{ github.sha }}
           docker push ${{ steps.login-ecr.outputs.registry }}/cloudpulse:order-latest
+      # Build Frontend image
+      - name: Build Frontend Docker image
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: |
+          docker build -t ${{ steps.login-ecr.outputs.registry }}/cloudpulse:frontend-${{ github.sha }} ./frontend
+          docker tag ${{ steps.login-ecr.outputs.registry }}/cloudpulse:frontend-${{ github.sha }} ${{ steps.login-ecr.outputs.registry }}/cloudpulse:frontend-latest
+
+      # Push Frontend image
+      - name: Push Frontend Docker image
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: |
+          docker push ${{ steps.login-ecr.outputs.registry }}/cloudpulse:frontend-${{ github.sha }}
+          docker push ${{ steps.login-ecr.outputs.registry }}/cloudpulse:frontend-latest
